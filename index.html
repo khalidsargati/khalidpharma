@@ -310,19 +310,16 @@ function fmtRel(iso){
 function setSyncStatus(t,c){syncStatus.textContent=t;syncStatus.className="sync-status "+(c||"");}
 
 /* ══════════════════════════════════════════════
-   SYNC via JSONP
+   SYNC via fetch()
    ──────────────────────────────────────────────
-   How JSONP works:
-   1. We create a <script> tag pointing to the
-      Apps Script URL with ?action=sync&cb=__cb
-   2. Apps Script wraps its JSON in __cb({...})
-      and returns it as JavaScript
-   3. The browser executes it — __cb() fires
-   4. We get the data. No CORS, no fetch().
+   Apps Script's ContentService (used when
+   ?action=sync is passed) returns proper CORS
+   headers — unlike HtmlService. So fetch() works
+   perfectly here with no proxy needed.
    ══════════════════════════════════════════════ */
 let syncing=false;
 
-function doSync(){
+async function doSync(){
   if(syncing)return;
 
   syncing=true;
@@ -340,66 +337,34 @@ function doSync(){
 
   setSyncStatus("Downloading… (15–30s first time)","busy");
 
-  /* Unique callback name to avoid collisions */
-  const cbName="__pharmacySync_"+Date.now();
-
-  /* Timeout — if Apps Script doesn't respond in 90s */
-  const timeout=setTimeout(()=>{
-    cleanup();
-    clearInterval(ticker);
-    showSyncError("Timeout — Apps Script took too long. Try again.");
-    finishSync();
-  },90000);
-
-  /* The JSONP callback — Apps Script calls this */
-  window[cbName]=async function(res){
-    cleanup();
+  try{
+    const resp = await fetch(
+      getUrl()+"?action=sync&_="+Date.now(),
+      { redirect:"follow" }
+    );
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const res = await resp.json();
     clearInterval(ticker);
 
-    if(res.status!=="ok"){
-      showSyncError(res.message||"Server error");
-      finishSync();
-      return;
-    }
+    if(res.status!=="ok") throw new Error(res.message||"Server error");
 
     syncBar.style.width="96%";
     setSyncStatus("Saving to device…","busy");
-    try{
-      await savePayload(res.payload);
-      CACHE=res.payload;
-      syncBar.style.width="100%"; syncBar.style.background="#22c55e";
-      setTimeout(()=>{syncProgress.classList.remove("visible");syncBar.style.background="";syncBar.style.width="0%";},1000);
-      updateBadge();
-      setSyncStatus("Sync complete"+(res.payload._cached?" (cached)":""),"ok");
-      setInfo("✓ Synced — search is instant");
-      restoreTable();
-    }catch(e){
-      showSyncError("Save failed: "+e.message);
-    }
-    finishSync();
-  };
+    await savePayload(res.payload);
+    CACHE=res.payload;
+    syncBar.style.width="100%"; syncBar.style.background="#22c55e";
+    setTimeout(()=>{syncProgress.classList.remove("visible");syncBar.style.background="";syncBar.style.width="0%";},1000);
+    updateBadge();
+    setSyncStatus("Sync complete"+(res.payload._cached?" (cached)":""),"ok");
+    setInfo("✓ Synced — search is instant");
+    restoreTable();
 
-  function cleanup(){
-    clearTimeout(timeout);
-    /* Remove the script tag */
-    const old=document.getElementById("jsonpScript");
-    if(old)old.remove();
-    /* Remove the global callback */
-    try{delete window[cbName];}catch(_){window[cbName]=undefined;}
+  }catch(e){
+    clearInterval(ticker);
+    showSyncError(e.message||String(e));
   }
 
-  /* Inject the script tag */
-  const script=document.createElement("script");
-  script.id="jsonpScript";
-  /* Append cache-bust so browser doesn't cache the script tag response */
-  script.src=getUrl()+"?action=sync&cb="+cbName+"&_="+Date.now();
-  script.onerror=function(){
-    cleanup();
-    clearInterval(ticker);
-    showSyncError("Could not reach Apps Script. Check your URL and make sure deployment is set to 'Anyone'.");
-    finishSync();
-  };
-  document.head.appendChild(script);
+  finishSync();
 }
 
 function showSyncError(msg){
