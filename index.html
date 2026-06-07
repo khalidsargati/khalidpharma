@@ -260,8 +260,12 @@ async function loadPayload(){
 }
 
 /* ── URL storage (localStorage — simple, fast) ── */
-const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycby-WNTOQPntdjnB6vEMbFAh0qITpr5ScUr_QsjaZvCw5XMoCMSNjJNY2LsZBa7AfZeOEQ/exec";
-function getUrl(){ return APPS_SCRIPT_URL; }
+/* ── Your Cloudflare Worker URL ──────────────────────────
+   After deploying the worker, replace the URL below with
+   your worker's URL (e.g. https://pharmacy-sync.YOUR-NAME.workers.dev)
+   ─────────────────────────────────────────────────────── */
+const WORKER_URL = "https://yellow-sound-45e6.mendpharmacy.workers.dev";
+function getUrl(){ return WORKER_URL; }
 function setUrl(u){ /* URL is hardcoded */ }
 
 /* ── Startup ── */
@@ -338,10 +342,7 @@ async function doSync(){
   setSyncStatus("Downloading… (15–30s first time)","busy");
 
   try{
-    const resp = await fetch(
-      getUrl()+"?action=sync&_="+Date.now(),
-      { redirect:"follow" }
-    );
+    const resp = await fetch(getUrl());
     if(!resp.ok) throw new Error("HTTP "+resp.status);
     const res = await resp.json();
     clearInterval(ticker);
