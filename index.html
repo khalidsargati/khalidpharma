@@ -8,18 +8,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Pharmacy">
-<link rel="manifest" href="manifest.json">
 <title>Pharmacy</title>
 <style>
 html, body { margin:0; padding:0; background:#000; color:#fff; overflow-x:hidden; }
 body { font-family:-apple-system,system-ui,sans-serif; padding:10px; }
 
-.topbar {
-  display:flex; align-items:center; gap:8px;
-  background:#0a0a0a; border-radius:10px;
-  padding:8px 10px; margin-bottom:8px;
-  border:1px solid #1a1a1a;
-}
+.topbar { display:flex; align-items:center; gap:8px; background:#0a0a0a; border-radius:10px; padding:8px 10px; margin-bottom:8px; border:1px solid #1a1a1a; }
 .db-badge { display:flex; flex-direction:column; align-items:center; font-size:9px; color:#555; line-height:1.2; flex:0 0 auto; min-width:44px; }
 .db-badge .db-count { font-size:16px; font-weight:700; color:#0d6efd; line-height:1; }
 .db-badge.fresh .db-count { color:#22c55e; }
@@ -30,11 +24,7 @@ body { font-family:-apple-system,system-ui,sans-serif; padding:10px; }
 .sync-status.warn { color:#f59e0b; }
 .sync-status.err  { color:#ef4444; }
 .sync-status.busy { color:#60a5fa; }
-.btn-sync {
-  padding:7px 14px; border-radius:7px; font-size:13px; font-weight:600;
-  border:1px solid #1e3a5f; background:#0d2b4e; color:#60a5fa; cursor:pointer;
-  white-space:nowrap; flex:0 0 auto; display:flex; align-items:center; gap:5px;
-}
+.btn-sync { padding:7px 14px; border-radius:7px; font-size:13px; font-weight:600; border:1px solid #1e3a5f; background:#0d2b4e; color:#60a5fa; cursor:pointer; white-space:nowrap; flex:0 0 auto; display:flex; align-items:center; gap:5px; }
 .btn-sync:hover { background:#1a3e6e; }
 .btn-sync:disabled { opacity:.4; cursor:default; }
 .btn-sync.syncing { background:#1a1a00; border-color:#5a4a00; color:#f59e0b; }
@@ -59,27 +49,9 @@ button:hover { opacity:.85; }
 .spinner { width:14px; height:14px; border:2px solid #222; border-top-color:#0d6efd; border-radius:50%; animation:spin .9s linear infinite; flex-shrink:0; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-#syncProgress { display:none; background:#111; border-radius:4px; height:4px; margin-bottom:8px; overflow:hidden; border:1px solid #1a1a1a; }
+#syncProgress { display:none; background:#111; border-radius:4px; height:4px; margin-bottom:8px; overflow:hidden; }
 #syncBar { height:100%; width:0%; background:#0d6efd; border-radius:4px; transition:width .3s ease; }
 #syncProgress.visible { display:block; }
-
-/* URL config panel */
-#configPanel {
-  display:none; background:#0a0a0a; border:1px solid #1a1a1a;
-  border-radius:10px; padding:14px; margin-bottom:10px;
-}
-#configPanel.visible { display:block; }
-#configPanel label { font-size:12px; color:#666; display:block; margin-bottom:6px; }
-#configPanel input {
-  width:100%; box-sizing:border-box; padding:10px; border-radius:7px;
-  background:#111; border:1px solid #333; color:#fff; font-size:13px;
-  font-family:monospace;
-}
-#configPanel input:focus { outline:none; border-color:#0d6efd; }
-.config-actions { display:flex; gap:8px; margin-top:10px; }
-.config-actions button { flex:1; padding:9px; border-radius:7px; font-size:13px; font-weight:600; border:none; cursor:pointer; }
-.btn-save-url { background:#0d6efd; color:#fff; }
-.btn-cancel-url { background:#222; color:#aaa; }
 
 #paginationBar { display:none; gap:8px; align-items:center; margin:10px 0; }
 #paginationBar button { padding:10px 14px; border-radius:6px; background:#111; color:#fff; border:1px solid #222; cursor:pointer; }
@@ -107,28 +79,36 @@ tr.filtered-out { display:none; }
 .no-data h3 { margin:0 0 8px; color:#777; }
 .no-data p  { margin:0; font-size:13px; line-height:1.6; }
 .no-data button { margin-top:16px; padding:12px 24px; background:#0d6efd; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+
+/* Splash — shown instantly from localStorage before IndexedDB loads */
+#splash { position:fixed; inset:0; background:#000; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; transition:opacity .25s ease; }
+#splash.hidden { opacity:0; pointer-events:none; }
+#splash .logo  { font-size:36px; }
+#splash .label { font-size:14px; color:#444; }
+#splash .dot-row { display:flex; gap:6px; }
+#splash .dot { width:6px; height:6px; border-radius:50%; background:#222; animation:dotpulse 1.2s ease-in-out infinite; }
+#splash .dot:nth-child(2) { animation-delay:.2s; }
+#splash .dot:nth-child(3) { animation-delay:.4s; }
+@keyframes dotpulse { 0%,80%,100%{background:#222} 40%{background:#0d6efd} }
 </style>
 </head>
 <body>
 
-<!-- Config panel (hidden by default) -->
-<div id="configPanel">
-  <label>Apps Script Web App URL (paste your deployment URL)</label>
-  <input id="appsScriptUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
-  <div class="config-actions">
-    <button class="btn-save-url" onclick="saveUrl()">Save</button>
-    <button class="btn-cancel-url" onclick="toggleConfig()">Cancel</button>
-  </div>
+<!-- ── Splash screen (shown immediately, hides once DB is ready) ── -->
+<div id="splash">
+  <div class="logo">💊</div>
+  <div class="dot-row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="label" id="splashLabel">Loading…</div>
 </div>
 
-<!-- Sync bar -->
+<!-- ── Sync bar ── -->
 <div class="topbar">
   <div class="db-badge" id="dbBadge">
     <span class="db-count" id="dbCount">—</span>
     <span>rows</span>
   </div>
   <div class="sync-area">
-    <span class="sync-status" id="syncStatus">Starting…</span>
+    <span class="sync-status" id="syncStatus">Checking…</span>
   </div>
   <button class="btn-sync" id="btnSync" onclick="doSync()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -141,7 +121,6 @@ tr.filtered-out { display:none; }
 
 <div id="syncProgress"><div id="syncBar"></div></div>
 
-<!-- Row 1: Category + Search -->
 <div class="row-inputs">
   <select id="category">
     <option value="froshtn">Froshtn</option>
@@ -152,7 +131,6 @@ tr.filtered-out { display:none; }
   <input id="searchText" placeholder="Medicine, barcode…" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false">
 </div>
 
-<!-- Row 2: Buttons -->
 <div class="row-actions">
   <button class="btn-scan" id="btnScan" title="Scan Barcode">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -202,31 +180,28 @@ tr.filtered-out { display:none; }
 </div>
 
 <script>
-/* ══════════════════════════════════════════════
-   PHARMACY PWA v2 — Fully offline-first
-   
-   Hosting: GitHub Pages (or any static host)
-   Data:    IndexedDB on device
-   Network: Only used during Sync
-   
-   Setup: Edit APPS_SCRIPT_URL below with your
-          deployment URL, OR tap Sync → it will
-          prompt you if the URL is not set.
-   ══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   PHARMACY PWA — Apps Script hosted, instant re-opens
 
-/* ── Register Service Worker ── */
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(() => {});
-}
+   HOW INSTANT LOADING WORKS:
+   ─────────────────────────────────────────────────────
+   Apps Script always has a ~1-3s cold start that we
+   cannot avoid on first load. But every time AFTER that:
 
-/* ╔════════════════════════════════╗
-   ║  CONFIG — paste your URL here  ║
-   ╚════════════════════════════════╝
-   You can also leave this blank and set it
-   via the Sync button prompt on first use.    */
-const DEFAULT_APPS_SCRIPT_URL = "";
-/* example:
-   "https://script.google.com/macros/s/AKfycb.../exec"  */
+   1. Page HTML arrives from Google (unavoidable network)
+   2. JS runs immediately — reads IndexedDB (< 50ms)
+   3. Splash screen hides — app is READY before the
+      google.script.run bridge has even initialized
+
+   The perceived "load time" drops to nearly zero because
+   the user sees the full UI with their data almost
+   instantly after the HTML parses. The only true solution
+   for zero HTML load time is a separate static host (see
+   README), but this gives 90% of the benefit with no
+   extra hosting setup.
+
+   SYNC uses google.script.run — no CORS issues.
+   ═══════════════════════════════════════════════════════ */
 
 /* ── IndexedDB ── */
 const DB_NAME    = "PharmacyPWA";
@@ -236,16 +211,15 @@ const STORE_DATA = "data";
 const STALE_DAYS = 7;
 
 let DB    = null;
-let CACHE = null;
+let CACHE = null;  // { syncedAt, headers, cats, mega }
 
 /* ── App state ── */
-const PAGE_SIZE = 5000;
+const PAGE_SIZE       = 5000;
 let currentMode       = null;
 let currentCategory   = "froshtn";
 let currentPage       = 1;
 let totalRows         = 0;
 let currentHeaders    = null;
-let currentRows       = [];
 let ALL_ROWS_CACHE    = null;
 let ALL_ROWS_FILTERED = null;
 let currentSorts      = [];
@@ -253,20 +227,22 @@ let columnFilters     = {};
 let filterVisible     = false;
 
 /* ── DOM ── */
-const category      = document.getElementById("category");
-const searchText    = document.getElementById("searchText");
-const paginationBar = document.getElementById("paginationBar");
-const btnSync       = document.getElementById("btnSync");
-const syncStatus    = document.getElementById("syncStatus");
-const dbCountEl     = document.getElementById("dbCount");
-const dbBadgeEl     = document.getElementById("dbBadge");
-const syncProgress  = document.getElementById("syncProgress");
-const syncBar       = document.getElementById("syncBar");
-const tableWrapper  = document.getElementById("tableWrapper");
+const category     = document.getElementById("category");
+const searchText   = document.getElementById("searchText");
+const paginationBar= document.getElementById("paginationBar");
+const btnSync      = document.getElementById("btnSync");
+const syncStatus   = document.getElementById("syncStatus");
+const dbCountEl    = document.getElementById("dbCount");
+const dbBadgeEl    = document.getElementById("dbBadge");
+const syncProgress = document.getElementById("syncProgress");
+const syncBar      = document.getElementById("syncBar");
+const tableWrapper = document.getElementById("tableWrapper");
+const splash       = document.getElementById("splash");
+const splashLabel  = document.getElementById("splashLabel");
 
-/* ╔═══════════════════════════════╗
-   ║       INDEXEDDB               ║
-   ╚═══════════════════════════════╝ */
+/* ╔══════════════════════════════════╗
+   ║         INDEXEDDB                ║
+   ╚══════════════════════════════════╝ */
 function openDB() {
   return new Promise((res, rej) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -302,13 +278,14 @@ async function savePayload(payload) {
   await dbPut(STORE_DATA, "mega_headers", JSON.stringify(payload.mega.headers));
   await dbPut(STORE_DATA, "mega_rows",    JSON.stringify(payload.mega.rows));
 }
+
 async function loadPayload() {
   const syncedAt = await dbGet(STORE_META, "syncedAt");
   if (!syncedAt) return null;
   const headers = JSON.parse(await dbGet(STORE_META,"headers")||"{}");
   const cats = {};
   for (const cat of ["froshtn","henan","qaema"]) {
-    const raw = await dbGet(STORE_DATA,"cat_"+cat);
+    const raw = await dbGet(STORE_DATA, "cat_"+cat);
     cats[cat] = raw ? JSON.parse(raw) : [];
   }
   const mh = await dbGet(STORE_DATA,"mega_headers");
@@ -316,32 +293,41 @@ async function loadPayload() {
   return { syncedAt, headers, cats, mega:{ headers:mh?JSON.parse(mh):[], rows:mr?JSON.parse(mr):[] } };
 }
 
-/* URL storage */
-async function getStoredUrl() {
-  const url = await dbGet(STORE_META, "appsScriptUrl");
-  return url || DEFAULT_APPS_SCRIPT_URL || "";
-}
-async function setStoredUrl(url) { await dbPut(STORE_META, "appsScriptUrl", url); }
+/* ╔══════════════════════════════════╗
+   ║         STARTUP                  ║
+   ╚══════════════════════════════════╝
+   Runs as soon as the script tag parses —
+   before google.script.run is even available.
+   Reads IndexedDB and hides the splash fast.    */
 
-/* ╔═══════════════════════════════╗
-   ║       STARTUP                 ║
-   ╚═══════════════════════════════╝ */
-window.addEventListener("load", async () => {
-  setSyncStatus("Opening local database…", "");
-  try { DB = await openDB(); } catch(e) { setSyncStatus("Storage error: "+e.message,"err"); return; }
+(async function init() {
+  splashLabel.textContent = "Loading local data…";
 
-  const payload = await loadPayload();
-  if (payload) {
-    CACHE = payload;
-    updateBadge();
-    updateSyncStatus();
-    setInfo("Ready — tap Search or All");
-  } else {
-    updateBadge();
-    showNoDataState();
-    setSyncStatus("No local data — tap Sync","warn");
+  try {
+    DB = await openDB();
+    const payload = await loadPayload();
+
+    if (payload) {
+      CACHE = payload;
+      hideSplash();          // ← instant: data is ready
+      updateBadge();
+      updateSyncStatus();
+      setInfo("Ready — tap Search or All");
+    } else {
+      hideSplash();
+      showNoDataState();
+      setSyncStatus("No local data — tap Sync", "warn");
+    }
+  } catch(e) {
+    hideSplash();
+    setSyncStatus("Storage error: "+e.message, "err");
   }
-});
+})();
+
+function hideSplash() {
+  splash.classList.add("hidden");
+  setTimeout(() => { splash.style.display = "none"; }, 300);
+}
 
 function showNoDataState() {
   tableWrapper.innerHTML = `
@@ -349,7 +335,7 @@ function showNoDataState() {
       <div class="icon">📦</div>
       <h3>No local database yet</h3>
       <p>Tap <strong>Sync</strong> to download your pharmacy data.<br>
-         After the first sync, the app opens instantly — even offline.</p>
+         After the first sync, this screen loads instantly — even offline.</p>
       <button onclick="doSync()">Sync Now</button>
     </div>`;
 }
@@ -372,47 +358,34 @@ function updateBadge() {
 function updateSyncStatus() {
   if (!CACHE||!CACHE.syncedAt) { setSyncStatus("Not synced yet","warn"); return; }
   const days = (Date.now()-new Date(CACHE.syncedAt).getTime())/86400000;
-  const lbl  = fmtRelative(CACHE.syncedAt);
-  setSyncStatus(days<STALE_DAYS ? "Last sync: "+lbl : "⚠️ Data is "+Math.round(days)+"d old — sync soon", days<STALE_DAYS?"ok":"warn");
+  setSyncStatus(
+    days < STALE_DAYS
+      ? "Last sync: "+fmtRelative(CACHE.syncedAt)
+      : "⚠️ "+Math.round(days)+"d old — sync soon",
+    days < STALE_DAYS ? "ok" : "warn"
+  );
 }
 function fmtRelative(iso) {
   const m=Math.round((Date.now()-new Date(iso).getTime())/60000);
-  if (m<2) return "just now"; if (m<60) return m+"m ago";
-  const h=Math.round(m/60); if (h<24) return h+"h ago";
+  if(m<2)return"just now"; if(m<60)return m+"m ago";
+  const h=Math.round(m/60); if(h<24)return h+"h ago";
   const d=Math.round(h/24); return d===1?"yesterday":d+"d ago";
 }
-function setSyncStatus(t,c) { syncStatus.textContent=t; syncStatus.className="sync-status "+(c||""); }
+function setSyncStatus(t,c){ syncStatus.textContent=t; syncStatus.className="sync-status "+(c||""); }
 
-/* ── Config panel ── */
-let configVisible = false;
-function toggleConfig() {
-  configVisible = !configVisible;
-  document.getElementById("configPanel").classList.toggle("visible", configVisible);
-}
-async function saveUrl() {
-  const url = document.getElementById("appsScriptUrl").value.trim();
-  if (!url) { alert("Please paste your Apps Script URL"); return; }
-  await setStoredUrl(url);
-  toggleConfig();
-  doSync();
-}
-
-/* ╔═══════════════════════════════╗
-   ║       SYNC                    ║
-   ╚═══════════════════════════════╝ */
+/* ╔══════════════════════════════════╗
+   ║         SYNC                     ║
+   ║  Uses google.script.run — works  ║
+   ║  perfectly on Apps Script host.  ║
+   ╚══════════════════════════════════╝ */
 let syncing = false;
 
-async function doSync() {
+function doSync() {
   if (syncing) return;
 
-  const url = await getStoredUrl();
-  if (!url) {
-    // Show config panel to let user enter their URL
-    const input = document.getElementById("appsScriptUrl");
-    input.value = "";
-    document.getElementById("configPanel").classList.add("visible");
-    configVisible = true;
-    setSyncStatus("Paste your Apps Script URL and tap Save", "warn");
+  // google.script.run may not be available if running outside Apps Script
+  if (!window.google || !google.script || !google.script.run) {
+    setSyncStatus("Must be opened via the Apps Script URL", "err");
     return;
   }
 
@@ -420,56 +393,76 @@ async function doSync() {
   btnSync.disabled = true;
   btnSync.classList.add("syncing");
   btnSync.innerHTML = `<span class="spinner"></span> Syncing…`;
-  setSyncStatus("Connecting…","busy");
+  setSyncStatus("Connecting to server…","busy");
   syncProgress.classList.add("visible");
-  let prog = 5; syncBar.style.width = prog+"%";
 
+  let prog = 5;
+  syncBar.style.width = prog+"%";
   const ticker = setInterval(()=>{
-    prog = Math.min(prog+(prog<60?4:prog<85?1.5:0.3),92);
-    syncBar.style.width=prog+"%";
+    prog = Math.min(prog+(prog<60?4:prog<85?1.5:0.3), 92);
+    syncBar.style.width = prog+"%";
   }, 400);
 
-  try {
-    setSyncStatus("Downloading data… (15–30s first time)","busy");
+  setSyncStatus("Downloading… (15–30s first time)","busy");
 
-    // Direct fetch to Apps Script (no google.script.run needed)
-    const resp = await fetch(url + "?action=sync", { redirect:"follow" });
-    if (!resp.ok) throw new Error("HTTP "+resp.status);
-    const res = await resp.json();
+  google.script.run
+    .withSuccessHandler(async res => {
+      clearInterval(ticker);
 
-    clearInterval(ticker);
-    if (res.status !== "ok") throw new Error(res.message || "Server error");
+      if (res.status !== "ok") {
+        showSyncError(res.message||"Server error");
+        return;
+      }
 
-    syncBar.style.width="96%";
-    setSyncStatus("Saving to device…","busy");
-    await savePayload(res.payload);
-    CACHE = res.payload;
+      syncBar.style.width = "96%";
+      setSyncStatus("Saving to device…","busy");
 
-    syncBar.style.width="100%"; syncBar.style.background="#22c55e";
-    setTimeout(()=>{ syncProgress.classList.remove("visible"); syncBar.style.background=""; syncBar.style.width="0%"; },1000);
+      try {
+        await savePayload(res.payload);
+        CACHE = res.payload;
 
-    updateBadge();
-    setSyncStatus("Sync complete"+(res.payload._cached?" (server cached)"),"ok");
-    setInfo("✓ Data synced — search is now instant");
-    restoreTable();
+        syncBar.style.width="100%";
+        syncBar.style.background="#22c55e";
+        setTimeout(()=>{
+          syncProgress.classList.remove("visible");
+          syncBar.style.background="";
+          syncBar.style.width="0%";
+        }, 1000);
 
-  } catch(e) {
-    clearInterval(ticker);
-    syncBar.style.width="100%"; syncBar.style.background="#ef4444";
-    setTimeout(()=>{ syncProgress.classList.remove("visible"); syncBar.style.background=""; },1500);
-    setSyncStatus("Sync failed: "+e.message,"err");
-    console.error("Sync error:", e);
-  }
+        updateBadge();
+        setSyncStatus("Sync complete"+(res.payload._cached?" (cached)":""),"ok");
+        setInfo("✓ Synced — search is instant");
+        restoreTable();
 
+      } catch(e) {
+        showSyncError("Save failed: "+e.message);
+      }
+
+      finishSync();
+    })
+    .withFailureHandler(err => {
+      clearInterval(ticker);
+      showSyncError(err.message||String(err));
+      finishSync();
+    })
+    .getSyncPayload();
+}
+
+function showSyncError(msg) {
+  syncBar.style.width="100%"; syncBar.style.background="#ef4444";
+  setTimeout(()=>{ syncProgress.classList.remove("visible"); syncBar.style.background=""; },1500);
+  setSyncStatus("Sync failed: "+msg,"err");
+}
+function finishSync() {
   syncing = false;
   btnSync.disabled = false;
   btnSync.classList.remove("syncing");
   btnSync.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>Sync`;
 }
 
-/* ╔═══════════════════════════════╗
-   ║       SCANNER                 ║
-   ╚═══════════════════════════════╝ */
+/* ╔══════════════════════════════════╗
+   ║         SCANNER                  ║
+   ╚══════════════════════════════════╝ */
 const btnScan = document.getElementById("btnScan");
 let scanPopup = null;
 
@@ -497,12 +490,11 @@ btnScan.addEventListener("click", ()=>{
 
 function getScannerHtml(){return`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scan</title><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#000;overflow:hidden;color:#fff;font-family:-apple-system,system-ui,sans-serif}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.dim{position:absolute;left:0;right:0;height:25%;background:rgba(0,0,0,0.55);z-index:2;pointer-events:none}#dt{top:0}#db{bottom:0}#frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(74vw,290px);height:min(74vw,290px);z-index:3;pointer-events:none}#frame::before,#frame::after,#bl,#br{content:'';position:absolute;width:28px;height:28px}#frame::before{top:0;left:0;border-top:3px solid #e74c3c;border-left:3px solid #e74c3c;border-radius:3px 0 0 0}#frame::after{top:0;right:0;border-top:3px solid #e74c3c;border-right:3px solid #e74c3c;border-radius:0 3px 0 0}#bl{bottom:0;left:0;border-bottom:3px solid #e74c3c;border-left:3px solid #e74c3c;border-radius:0 0 0 3px}#br{bottom:0;right:0;border-bottom:3px solid #e74c3c;border-right:3px solid #e74c3c;border-radius:0 0 3px 0}#laser{position:absolute;left:50%;top:50%;transform:translateX(-50%);width:calc(min(74vw,290px) - 20px);height:2px;background:linear-gradient(90deg,transparent,#e74c3c,#ff6b6b,#e74c3c,transparent);box-shadow:0 0 10px #e74c3c;z-index:4;pointer-events:none;animation:sweep 2s ease-in-out infinite}@keyframes sweep{0%,100%{margin-top:calc(min(74vw,290px)/-2 + 14px)}50%{margin-top:calc(min(74vw,290px)/2 - 14px)}}#status{position:absolute;bottom:11%;left:0;right:0;z-index:5;text-align:center;font-size:14px;color:#ddd;text-shadow:0 1px 6px #000;padding:0 20px;pointer-events:none}#btnClose{position:absolute;top:14px;right:14px;z-index:10;background:rgba(0,0,0,0.55);border:1px solid #555;color:#fff;border-radius:50%;width:44px;height:44px;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}#success{display:none;position:absolute;inset:0;z-index:20;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;gap:16px}#success.show{display:flex}#tick{font-size:56px;color:#2ecc71}#sval{font-size:22px;font-weight:bold;color:#2ecc71;padding:0 24px;text-align:center;word-break:break-all}#lw{position:absolute;bottom:18%;left:15%;width:70%;height:4px;background:rgba(255,255,255,.15);border-radius:2px;z-index:6;display:none}#lb{height:100%;width:0%;background:#e74c3c;border-radius:2px;transition:width .05s linear}#lw.active{display:block}</style></head><body><video id="v" autoplay muted playsinline></video><div class="dim" id="dt"></div><div class="dim" id="db"></div><div id="frame"><div id="bl"></div><div id="br"></div></div><div id="laser"></div><div id="status">Starting camera\u2026</div><div id="lw"><div id="lb"></div></div><button id="btnClose" onclick="doClose()">&#x2715;</button><div id="success"><div id="tick">&#x2713;</div><div id="sval"></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js"><\/script><script>var v=document.getElementById('v'),st=document.getElementById('status'),stream=null,reader=null,done=false;function send(m){try{if(window.opener)window.opener.postMessage(m,'*');}catch(e){}}function doClose(){stopAll();send({type:'SCANNER_CLOSED'});window.close();}function stopAll(){done=true;try{if(reader){reader.reset();reader=null;}}catch(e){}try{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}catch(e){}v.srcObject=null;}function onFound(val){if(done)return;done=true;try{navigator.vibrate(150);}catch(e){}document.getElementById('sval').textContent=val;document.getElementById('success').classList.add('show');stopAll();send({type:'BARCODE_RESULT',value:val});setTimeout(()=>window.close(),1000);}async function start(){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});v.srcObject=stream;await v.play();st.textContent='Point at a barcode\u2026';var CM=300,lv='',cs=0,lw=document.getElementById('lw'),lb=document.getElementById('lb');function chk(val){var now=Date.now();if(val!==lv){lv=val;cs=now;lw.classList.add('active');lb.style.width='0%';st.textContent='Hold steady\u2026';return false;}var p=Math.min(100,((now-cs)/CM)*100);lb.style.width=p+'%';lb.style.background=p>=100?'#2ecc71':'#e74c3c';if(p>=100)lw.classList.remove('active');return(now-cs)>=CM;}function reset(){lv='';cs=0;lb.style.width='0%';lw.classList.remove('active');st.textContent='Point at a barcode\u2026';}if('BarcodeDetector' in window){var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','qr_code','data_matrix']});(function loop(){if(done)return;det.detect(v).then(c=>{if(c.length){if(chk(c[0].rawValue))onFound(c[0].rawValue);}else reset();setTimeout(loop,80);}).catch(()=>setTimeout(loop,80));})();}else if(typeof ZXing!=='undefined'){reader=new ZXing.BrowserMultiFormatReader();var devs=await reader.listVideoInputDevices();var back=devs.find(d=>/back|rear|environment/i.test(d.label||''))||devs[devs.length-1];reader.decodeFromVideoDevice(back?back.deviceId:undefined,v,r=>{if(!done&&r){if(chk(r.getText()))onFound(r.getText());}else if(!r)reset();});}else st.textContent='Scanner not loaded.';}catch(err){st.textContent='Camera error: '+err.message;}}start();<\/script></body></html>`;}
 
-/* ╔═══════════════════════════════╗
-   ║       TABLE RENDERING         ║
-   ╚═══════════════════════════════╝ */
+/* ╔══════════════════════════════════╗
+   ║   TABLE / SEARCH / SORT / FILTER ║
+   ╚══════════════════════════════════╝ */
 category.addEventListener("change", ()=>{
   currentCategory=category.value; currentMode=null; currentPage=1;
-  totalRows=0; currentHeaders=null; currentRows=[];
   ALL_ROWS_CACHE=null; ALL_ROWS_FILTERED=null;
   currentSorts=[]; columnFilters={};
   hidePagination(); clearTable(); setInfo("");
@@ -519,27 +511,27 @@ function disableControls(d){
 }
 
 function normH(h){ return String(h||"").toLowerCase().replace(/\s+/g,"").trim(); }
-function findBcIdxs(headers){ const s=new Set(["barcode","bar code","code","kod","ean","upc"].map(x=>x.replace(/\s+/g,""))); return headers.reduce((a,h,i)=>{ if(s.has(normH(h)))a.push(i); return a; },[]); }
+function findBcIdxs(headers){ const s=new Set(["barcode","barcode","code","kod","ean","upc"].map(x=>x.replace(/\s+/g,""))); return headers.reduce((a,h,i)=>{ if(s.has(normH(h)))a.push(i); return a; },[]); }
 function isNum(r){ const s=String(r??"").trim(); return s?/^-?\d+(\.\d+)?$/.test(s.replace(/[, ]/g,"")):false; }
 function fmtNum(r){ const s=String(r??"").trim(); if(!s)return s; const c=s.replace(/[, ]/g,""); if(!/^-?\d+(\.\d+)?$/.test(c))return s; const n=Number(c); return isFinite(n)?(c.includes(".")?(Math.round(n*10)/10).toString():Math.trunc(n).toString()):s; }
 function esc(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-function draw(headers, rows){
+function draw(headers, rows) {
   restoreTable();
-  const thead=document.getElementById("thead"), tbody=document.getElementById("tbody");
-  const bIdxs=findBcIdxs(headers);
-  const fh=headers.filter((_,i)=>!bIdxs.includes(i));
-  const fr=rows.map(r=>r.filter((_,i)=>!bIdxs.includes(i)));
-  currentHeaders=fh; currentRows=fr;
+  const thead = document.getElementById("thead");
+  const tbody = document.getElementById("tbody");
+  const bIdxs = findBcIdxs(headers);
+  const fh = headers.filter((_,i)=>!bIdxs.includes(i));
+  const fr = rows.map(r=>r.filter((_,i)=>!bIdxs.includes(i)));
+  currentHeaders = fh;
 
-  thead.innerHTML = "<tr>"+fh.map((h,i)=>{
+  thead.innerHTML = "<tr>" + fh.map((h,i)=>{
     const col=String(h||"");
     const ix=currentSorts.findIndex(s=>String(s.name||"").toLowerCase()===col.toLowerCase());
     const ind=ix>=0?(currentSorts[ix].dir==="desc"?"▼":"▲")+"<sup>"+(ix+1)+"</sup>":"⇅";
-    const cl=col.toLowerCase().trim();
-    const isItem=cl==="item_name"||cl==="item_names";
-    return`<th class="${isItem?"sortable item-name-col":"sortable"}" data-idx="${i}" data-col="${esc(col)}">${esc(col)} <span class="indicator">${ind}</span></th>`;
-  }).join("")+"</tr>"+
+    const cl=col.toLowerCase().trim(), isItem=cl==="item_name"||cl==="item_names";
+    return `<th class="${isItem?"sortable item-name-col":"sortable"}" data-idx="${i}" data-col="${esc(col)}">${esc(col)} <span class="indicator">${ind}</span></th>`;
+  }).join("") + "</tr>" +
   `<tr id="filterRow" class="filter-row${filterVisible?" visible":""}">` +
   fh.map((_,i)=>`<th><input class="filter-input" data-fidx="${i}" placeholder="" value="${esc(columnFilters[i]||"")}" autocomplete="off"></th>`).join("") +
   "</tr>";
@@ -549,12 +541,12 @@ function draw(headers, rows){
     inp.addEventListener("click",e=>e.stopPropagation());
   });
 
-  tbody.innerHTML=fr.map(row=>"<tr>"+row.map((c,i)=>{
+  tbody.innerHTML = fr.map(row=>"<tr>"+row.map((c,i)=>{
     if(c==null)return"<td></td>";
-    const t=String(c),hasBr=t.includes("<br>");
+    const t=String(c), hasBr=t.includes("<br>");
     const show=hasBr?t:(isNum(t)?fmtNum(t):t);
     const cl=(currentHeaders[i]||"").toLowerCase().trim();
-    return`<td class="${cl==="item_name"||cl==="item_names"?"item-name-col":""}">${show}</td>`;
+    return `<td class="${cl==="item_name"||cl==="item_names"?"item-name-col":""}">${show}</td>`;
   }).join("")+"</tr>").join("");
 
   applyColumnFilters();
@@ -577,16 +569,14 @@ function applyColumnFilters(){
   if(currentMode==="showAll"&&ALL_ROWS_CACHE){
     const filtered=af.length===0?ALL_ROWS_CACHE:ALL_ROWS_CACHE.filter(r=>rowMatch(r,af));
     currentPage=1;
-    const slice=filtered.slice(0,PAGE_SIZE);
-    tbody.innerHTML=slice.map(row=>"<tr>"+row.map((c,i)=>{
+    tbody.innerHTML=filtered.slice(0,PAGE_SIZE).map(row=>"<tr>"+row.map((c,i)=>{
       if(c==null)return"<td></td>"; const t=String(c),hasBr=t.includes("<br>");
       const show=hasBr?t:(isNum(t)?fmtNum(t):t);
       const cl=(currentHeaders[i]||"").toLowerCase().trim();
       return`<td class="${cl==="item_name"||cl==="item_names"?"item-name-col":""}">${show}</td>`;
     }).join("")+"</tr>").join("");
     totalRows=filtered.length;
-    if(filtered.length>PAGE_SIZE)showPagination(1,PAGE_SIZE,filtered.length);
-    else hidePagination();
+    if(filtered.length>PAGE_SIZE)showPagination(1,PAGE_SIZE,filtered.length); else hidePagination();
     setInfo(af.length>0?`${filtered.length} of ${ALL_ROWS_CACHE.length} rows (filtered)`:`${filtered.length} rows`);
     ALL_ROWS_FILTERED=af.length>0?filtered:null; return;
   }
@@ -642,7 +632,7 @@ function onHeaderClick(col){
   else if(currentMode==="showAll"){currentPage=1;showAll(1);}
 }
 
-/* ── SEARCH ── */
+/* Search */
 function handleSearch(){
   const q=searchText.value.trim().toLowerCase();
   const cat=category.value;
@@ -652,16 +642,16 @@ function handleSearch(){
   setBusy("Searching…");
   setTimeout(()=>{
     let rows,headers;
-    if(cat==="megadata"){ rows=CACHE.mega.rows.filter(r=>r.some(c=>String(c||"").toLowerCase().includes(q))); headers=CACHE.mega.headers; }
-    else { const catRows=CACHE.cats[cat]||[]; rows=catRows.filter(r=>r.some(c=>String(c||"").toLowerCase().includes(q))); headers=CACHE.headers[cat]; }
-    if(!headers){setInfo("Category not in local data.");clearBusy();return;}
+    if(cat==="megadata"){rows=CACHE.mega.rows.filter(r=>r.some(c=>String(c||"").toLowerCase().includes(q)));headers=CACHE.mega.headers;}
+    else{rows=(CACHE.cats[cat]||[]).filter(r=>r.some(c=>String(c||"").toLowerCase().includes(q)));headers=CACHE.headers[cat];}
+    if(!headers){setInfo("Category not found.");clearBusy();return;}
     if((cat==="qaema"||cat==="henan")&&!currentSorts.length){const di=findDateIdx(headers);if(di!==-1)currentSorts=[{name:headers[di],dir:"desc"}];}
     if(currentSorts.length)rows=multiSort(headers,rows,currentSorts);
     draw(headers,rows); setInfo(`${rows.length} results`); clearBusy();
   },0);
 }
 
-/* ── SHOW ALL ── */
+/* Show All */
 function showAll(pageOverride){
   const cat=category.value;
   if(!CACHE){setInfo("No local data — tap Sync first.");return;}
@@ -679,25 +669,26 @@ function showAll(pageOverride){
   setInfo(`${end-start} of ${totalRows} rows`);
 }
 
-function goPrev(){ if(currentMode!=="showAll")return; if(currentPage>1){currentPage--;if(ALL_ROWS_FILTERED)renderFP();else showAll(currentPage);} }
-function goNext(){ if(currentMode!=="showAll")return; if(currentPage*PAGE_SIZE<totalRows){currentPage++;if(ALL_ROWS_FILTERED)renderFP();else showAll(currentPage);} }
+function goPrev(){ if(currentMode!=="showAll"||currentPage<=1)return; currentPage--; if(ALL_ROWS_FILTERED)renderFP(); else showAll(currentPage); }
+function goNext(){ if(currentMode!=="showAll"||currentPage*PAGE_SIZE>=totalRows)return; currentPage++; if(ALL_ROWS_FILTERED)renderFP(); else showAll(currentPage); }
 function renderFP(){
   const start=(currentPage-1)*PAGE_SIZE;
-  const slice=ALL_ROWS_FILTERED.slice(start,Math.min(start+PAGE_SIZE,ALL_ROWS_FILTERED.length));
   const tbody=document.getElementById("tbody");
-  tbody.innerHTML=slice.map(row=>"<tr>"+row.map((c,i)=>{
-    if(c==null)return"<td></td>"; const t=String(c),hasBr=t.includes("<br>");
-    const show=hasBr?t:(isNum(t)?fmtNum(t):t);
-    const cl=(currentHeaders[i]||"").toLowerCase().trim();
-    return`<td class="${cl==="item_name"||cl==="item_names"?"item-name-col":""}">${show}</td>`;
-  }).join("")+"</tr>").join("");
+  tbody.innerHTML=ALL_ROWS_FILTERED.slice(start,Math.min(start+PAGE_SIZE,ALL_ROWS_FILTERED.length)).map(row=>
+    "<tr>"+row.map((c,i)=>{
+      if(c==null)return"<td></td>"; const t=String(c),hasBr=t.includes("<br>");
+      const show=hasBr?t:(isNum(t)?fmtNum(t):t);
+      const cl=(currentHeaders[i]||"").toLowerCase().trim();
+      return`<td class="${cl==="item_name"||cl==="item_names"?"item-name-col":""}">${show}</td>`;
+    }).join("")+"</tr>"
+  ).join("");
   showPagination(currentPage,PAGE_SIZE,ALL_ROWS_FILTERED.length);
   setInfo(`${ALL_ROWS_FILTERED.length} of ${ALL_ROWS_CACHE.length} rows (filtered)`);
 }
 
 function showPagination(p,ps,total){
   paginationBar.style.display="flex";
-  const start=total===0?0:(p-1)*ps+1,end=Math.min(p*ps,total);
+  const start=total===0?0:(p-1)*ps+1, end=Math.min(p*ps,total);
   document.getElementById("pageStats").textContent=`${start}–${end} of ${total}`;
   document.getElementById("btnPrev").disabled=(p<=1);
   document.getElementById("btnNext").disabled=(p*ps>=total);
