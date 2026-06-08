@@ -471,7 +471,10 @@ function rowMatch(row,af){return af.every(([idx,fv])=>cellMatch(row[+idx],fv));}
 function applyColumnFilters(){
   const af=getAF(),tbody=document.getElementById("tbody");if(!tbody)return;
   if(currentMode==="showAll"&&ALL_ROWS_CACHE){
-    const filtered=af.length?ALL_ROWS_CACHE.filter(r=>rowMatch(r,af)):ALL_ROWS_CACHE;
+    // No active filters — nothing to do, pagination is handled by showAll/goPrev/goNext
+    if(!af.length){ ALL_ROWS_FILTERED=null; return; }
+    // Has filters — filter, reset to page 1, show results
+    const filtered=ALL_ROWS_CACHE.filter(r=>rowMatch(r,af));
     currentPage=1;
     tbody.innerHTML=filtered.slice(0,PAGE_SIZE).map(row=>"<tr>"+row.map((c,i)=>{
       if(c==null)return"<td></td>";const t=String(c),hasBr=t.includes("<br>");
@@ -480,8 +483,8 @@ function applyColumnFilters(){
     }).join("")+"</tr>").join("");
     totalRows=filtered.length;
     if(filtered.length>PAGE_SIZE)showPagination(1,PAGE_SIZE,filtered.length);else hidePagination();
-    setInfo(af.length?`${filtered.length} of ${ALL_ROWS_CACHE.length} rows (filtered)`:`${filtered.length} rows`);
-    ALL_ROWS_FILTERED=af.length?filtered:null;return;
+    setInfo(`${filtered.length} of ${ALL_ROWS_CACHE.length} rows (filtered)`);
+    ALL_ROWS_FILTERED=filtered;return;
   }
   const domRows=document.getElementById("tbody").querySelectorAll("tr");let vis=0;
   domRows.forEach(row=>{
