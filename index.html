@@ -417,7 +417,14 @@ function disableControls(d){
   category.disabled=d;searchText.disabled=d;
 }
 function normH(h){return String(h||"").toLowerCase().replace(/\s+/g,"").trim();}
-function findBcIdxs(h){const s=new Set(["barcode","code","kod","ean","upc"]);return h.reduce((a,x,i)=>{if(s.has(normH(x)))a.push(i);return a;},[]);}
+function findBcIdxs(headers){
+  /* In megadata, BARCODE is a real data column — don't hide it.
+     Detect megadata by presence of Q-M header. */
+  const isMega=headers.some(h=>String(h||"").trim()==="Q-M");
+  if(isMega) return []; // never hide columns in megadata
+  const s=new Set(["barcode","code","kod","ean","upc"]);
+  return headers.reduce((a,x,i)=>{if(s.has(normH(x)))a.push(i);return a;},[]);
+}
 function isNum(r){const s=String(r??"").trim();return s?/^-?\d+(\.\d+)?$/.test(s.replace(/[, ]/g,"")):false;}
 function fmtNum(r){const s=String(r??"").trim();if(!s)return s;const c=s.replace(/[, ]/g,"");if(!/^-?\d+(\.\d+)?$/.test(c))return s;const n=Number(c);return isFinite(n)?(c.includes(".")?(Math.round(n*10)/10).toString():Math.trunc(n).toString()):s;}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -544,21 +551,63 @@ function handleSearch(){
 function showAll(pageOverride){
   const cat=category.value;
   if(!CACHE){setInfo("No local data — tap Sync first.");return;}
-  currentMode="showAll";currentCategory=cat;currentPage=pageOverride||currentPage||1;
-  let all,headers;
-  if(cat==="megadata"){all=CACHE.mega.rows;headers=CACHE.mega.headers;}
-  else{all=CACHE.cats[cat]||[];headers=CACHE.headers[cat];}
-  if(!headers){setInfo("Category not found.");return;}
-  if((cat==="qaema"||cat==="henan")&&!currentSorts.length){const di=findDateIdx(headers);if(di!==-1)currentSorts=[{name:headers[di],dir:"desc"}];}
-  if(currentSorts.length)all=multiSort(headers,all,currentSorts);
-  ALL_ROWS_CACHE=all;ALL_ROWS_FILTERED=null;totalRows=all.length;
+  currentMode="showAll";currentCategory=cat;
+
+  // Only rebuild the full sorted cache when category/sort changes,
+  // not on every page navigation
+  const needRebuild = pageOverride===1 || ALL_ROWS_CACHE===null;
+
+  if(needRebuild){
+    currentPage=1;
+    let all,headers;
+    if(cat==="megadata"){all=CACHE.mega.rows;headers=CACHE.mega.headers;}
+    else{all=CACHE.cats[cat]||[];headers=CACHE.headers[cat];}
+    if(!headers){setInfo("Category not found.");return;}
+    if((cat==="qaema"||cat==="henan")&&!currentSorts.length){const di=findDateIdx(headers);if(di!==-1)currentSorts=[{name:headers[di],dir:"desc"}];}
+    if(currentSorts.length)all=multiSort(headers,all,currentSorts);
+    ALL_ROWS_CACHE=all;ALL_ROWS_FILTERED=null;totalRows=all.length;
+  } else {
+    currentPage=pageOverride||currentPage||1;
+  }
+
+  let headers;
+  if(cat==="megadata") headers=CACHE.mega.headers;
+  else headers=CACHE.headers[cat];
+
   const start=(currentPage-1)*PAGE_SIZE,end=Math.min(start+PAGE_SIZE,totalRows);
-  draw(headers,all.slice(start,end));showPagination(currentPage,PAGE_SIZE,totalRows);
+  draw(headers,ALL_ROWS_CACHE.slice(start,end));
+  showPagination(currentPage,PAGE_SIZE,totalRows);
   setInfo(`${end-start} of ${totalRows} rows`);
 }
 
-function goPrev(){if(currentMode!=="showAll"||currentPage<=1)return;currentPage--;ALL_ROWS_FILTERED?renderFP():showAll(currentPage);}
-function goNext(){if(currentMode!=="showAll"||currentPage*PAGE_SIZE>=totalRows)return;currentPage++;ALL_ROWS_FILTERED?renderFP():showAll(currentPage);}
+function goPrev(){
+  if(currentMode!=="showAll"||currentPage<=1)return;
+  currentPage--;
+  if(ALL_ROWS_FILTERED) renderFP();
+  else{
+    let headers;
+    if(currentCategory==="megadata") headers=CACHE.mega.headers;
+    else headers=CACHE.headers[currentCategory];
+    const start=(currentPage-1)*PAGE_SIZE,end=Math.min(start+PAGE_SIZE,totalRows);
+    draw(headers,ALL_ROWS_CACHE.slice(start,end));
+    showPagination(currentPage,PAGE_SIZE,totalRows);
+    setInfo(`${end-start} of ${totalRows} rows`);
+  }
+}
+function goNext(){
+  if(currentMode!=="showAll"||currentPage*PAGE_SIZE>=totalRows)return;
+  currentPage++;
+  if(ALL_ROWS_FILTERED) renderFP();
+  else{
+    let headers;
+    if(currentCategory==="megadata") headers=CACHE.mega.headers;
+    else headers=CACHE.headers[currentCategory];
+    const start=(currentPage-1)*PAGE_SIZE,end=Math.min(start+PAGE_SIZE,totalRows);
+    draw(headers,ALL_ROWS_CACHE.slice(start,end));
+    showPagination(currentPage,PAGE_SIZE,totalRows);
+    setInfo(`${end-start} of ${totalRows} rows`);
+  }
+}
 function renderFP(){
   const start=(currentPage-1)*PAGE_SIZE,tbody=document.getElementById("tbody");
   tbody.innerHTML=ALL_ROWS_FILTERED.slice(start,Math.min(start+PAGE_SIZE,ALL_ROWS_FILTERED.length)).map(row=>
