@@ -1,4 +1,4 @@
-const CACHE = "pharmacy-v2";
+const CACHE = "pharmacy-v3";
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
